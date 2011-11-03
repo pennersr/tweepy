@@ -4,6 +4,7 @@
 
 import os
 import mimetypes
+from datetime import datetime
 
 from tweepy.binder import bind_api
 from tweepy.error import TweepError
@@ -752,3 +753,23 @@ class API(object):
 
         return headers, body
 
+    def rate_limit_status_from_last_response(self):
+        rate_limit = {}
+        if hasattr(self, 'last_response'):
+            headers = dict(self.last_response.getheaders())
+            if 'x-ratelimit-remaining' in headers:
+                rate_limit['remaining_hits'] \
+                    = int(headers['x-ratelimit-remaining'])
+            if 'x-ratelimit-limit' in headers:
+                rate_limit['hourly_limit'] = int(headers['x-ratelimit-limit'])
+            if 'x-ratelimit-reset' in headers:
+                secs = int(headers['x-ratelimit-reset'])
+                dt = datetime.fromtimestamp(secs)
+                dt_str = dt.strftime('%a %b %d %H:%M:%S +0000 %Y')
+                # Mimic rate_limit_status()...
+                rate_limit['reset_time_in_seconds'] = secs
+                rate_limit['reset_time'] = dt_str
+                # ... and make API usable
+                rate_limit['reset_time_in_datetime'] = dt
+        return rate_limit
+            
